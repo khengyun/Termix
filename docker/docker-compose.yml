@@ -34,8 +34,10 @@ services:
 
 volumes:
   termix-data:
+    name: termix-data
     driver: local
   tailscale-state:
+    name: tailscale-state
     driver: local
 
 networks:
