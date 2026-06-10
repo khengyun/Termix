@@ -5,6 +5,40 @@ PUID=${PUID:-1000}
 PGID=${PGID:-1000}
 
 if [ "$(id -u)" = "0" ]; then
+    if [ "${ENABLE_TAILSCALE:-true}" = "true" ]; then
+        TS_STATE_DIR=${TS_STATE_DIR:-/var/lib/tailscale}
+        TS_SOCKET=${TS_SOCKET:-/var/run/tailscale/tailscaled.sock}
+        TS_HOSTNAME=${TS_HOSTNAME:-termix}
+
+        mkdir -p "$TS_STATE_DIR" "$(dirname "$TS_SOCKET")"
+
+        echo "Starting Tailscale..."
+        PORT= tailscaled --state="$TS_STATE_DIR/tailscaled.state" --socket="$TS_SOCKET" &
+
+        for _ in $(seq 1 30); do
+            if tailscale --socket="$TS_SOCKET" status --json >/dev/null 2>&1; then
+                break
+            fi
+            sleep 1
+        done
+
+        if ! tailscale --socket="$TS_SOCKET" status --json >/dev/null 2>&1; then
+            echo "Tailscale daemon did not become ready."
+            exit 1
+        fi
+
+        if [ -n "${TS_AUTHKEY:-}" ]; then
+            # TS_EXTRA_ARGS intentionally supports multiple command-line arguments.
+            # shellcheck disable=SC2086
+            tailscale --socket="$TS_SOCKET" up \
+                --auth-key="$TS_AUTHKEY" \
+                --hostname="$TS_HOSTNAME" \
+                ${TS_EXTRA_ARGS:-}
+        else
+            echo "TS_AUTHKEY is empty; reusing existing Tailscale state if available."
+        fi
+    fi
+
     if [ "$PUID" = "0" ]; then
         echo "Running as root (PUID=0, PGID=$PGID)"
         chown -R root:root /app/data /app/uploads /tmp/nginx 2>/dev/null || true
