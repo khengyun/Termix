@@ -78,7 +78,6 @@ jobs:
       - name: Pull and deploy
         env:
           TERMIX_IMAGE: ${{ needs.build.outputs.image }}:${{ github.sha }}
-          TS_AUTHKEY: ${{ secrets.TS_AUTHKEY }}
         run: |
           docker compose -f docker/docker-compose.yml pull
           docker compose -f docker/docker-compose.yml up -d --remove-orphans

@@ -8,7 +8,8 @@ services:
       - termix-data:/app/data
     environment:
       PORT: "8080"
-      GUACD_HOST: "guacd"
+      # host networking: container-name DNS does not exist, guacd is on loopback
+      GUACD_HOST: "127.0.0.1"
     depends_on:
       - guacd
 
