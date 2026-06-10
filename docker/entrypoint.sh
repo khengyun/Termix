@@ -12,6 +12,14 @@ if [ "$(id -u)" = "0" ]; then
 
         mkdir -p "$TS_STATE_DIR" "$(dirname "$TS_SOCKET")"
 
+        if [ ! -c /dev/net/tun ]; then
+            echo "Creating Tailscale TUN device..."
+            mkdir -p /dev/net
+            rm -rf /dev/net/tun
+            mknod /dev/net/tun c 10 200
+            chmod 666 /dev/net/tun
+        fi
+
         echo "Starting Tailscale..."
         PORT= tailscaled --state="$TS_STATE_DIR/tailscaled.state" --socket="$TS_SOCKET" &
 

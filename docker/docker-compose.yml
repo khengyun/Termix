@@ -1,24 +1,21 @@
 services:
   termix:
     image: ${TERMIX_IMAGE:-termix:latest}
-    build:
-      context: ..
-      dockerfile: docker/Dockerfile
     container_name: termix
     restart: unless-stopped
     ports:
       - "8080:8080"
     cap_add:
       - NET_ADMIN
-    devices:
-      - /dev/net/tun:/dev/net/tun
+      - MKNOD
+    device_cgroup_rules:
+      - "c 10:200 rwm"
     volumes:
       - termix-data:/app/data
       - tailscale-state:/var/lib/tailscale
     environment:
       PORT: "8080"
       GUACD_HOST: "guacd"
-      ENABLE_TAILSCALE: true
       TS_AUTHKEY: "${TS_AUTHKEY:-}"
     depends_on:
       - guacd
@@ -42,4 +39,5 @@ volumes:
 
 networks:
   termix-net:
+    name: termix-net
     driver: bridge
