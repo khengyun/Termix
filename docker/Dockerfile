@@ -52,29 +52,20 @@ RUN npm ci --omit=dev --ignore-scripts && \
     npm rebuild better-sqlite3 bcryptjs ssh2 && \
     npm cache clean --force
 
-# Stage 5: Tailscale binaries
-FROM tailscale/tailscale:stable AS tailscale
-
-# Stage 6: Final optimized image
+# Stage 5: Final optimized image
 FROM node:24-slim
 WORKDIR /app
 
 ENV DATA_DIR=/app/data \
     PORT=8080 \
-    NODE_ENV=production \
-    ENABLE_TAILSCALE=true \
-    TS_STATE_DIR=/var/lib/tailscale \
-    TS_SOCKET=/var/run/tailscale/tailscaled.sock
+    NODE_ENV=production
 
-RUN apt-get update && apt-get install -y nginx gettext-base openssl ca-certificates gosu wget iproute2 iptables && \
+RUN apt-get update && apt-get install -y nginx gettext-base openssl ca-certificates gosu wget && \
     update-ca-certificates && \
     rm -rf /var/lib/apt/lists/* && \
-    mkdir -p /app/data /app/uploads /app/data/.opk /app/nginx /tmp/nginx /var/lib/tailscale /var/run/tailscale && \
+    mkdir -p /app/data /app/uploads /app/data/.opk /app/nginx /tmp/nginx && \
     chown -R node:node /app /tmp/nginx && \
     chmod 755 /app/data /app/uploads /app/data/.opk /app/nginx /tmp/nginx
-
-COPY --from=tailscale /usr/local/bin/tailscale /usr/local/bin/tailscale
-COPY --from=tailscale /usr/local/bin/tailscaled /usr/local/bin/tailscaled
 
 COPY docker/nginx.conf /app/nginx/nginx.conf.template
 COPY docker/nginx-https.conf /app/nginx/nginx-https.conf.template

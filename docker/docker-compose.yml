@@ -3,41 +3,22 @@ services:
     image: ${TERMIX_IMAGE:-termix:latest}
     container_name: termix
     restart: unless-stopped
-    ports:
-      - "8080:8080"
-    cap_add:
-      - NET_ADMIN
-      - MKNOD
-    device_cgroup_rules:
-      - "c 10:200 rwm"
+    network_mode: host
     volumes:
       - termix-data:/app/data
-      - tailscale-state:/var/lib/tailscale
     environment:
       PORT: "8080"
       GUACD_HOST: "guacd"
-      TS_AUTHKEY: "${TS_AUTHKEY:-}"
     depends_on:
       - guacd
-    networks:
-      - termix-net
 
   guacd:
     image: guacamole/guacd:1.6.0
     container_name: guacd
+    network_mode: host
     restart: unless-stopped
-    networks:
-      - termix-net
 
 volumes:
   termix-data:
     name: termix-data
     driver: local
-  tailscale-state:
-    name: tailscale-state
-    driver: local
-
-networks:
-  termix-net:
-    name: termix-net
-    driver: bridge
