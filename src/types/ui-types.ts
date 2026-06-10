@@ -90,6 +90,13 @@ export type Host = {
   defaultPath?: string;
 
   enableDocker: boolean;
+  enableProxmox: boolean;
+  proxmoxConfig?: {
+    defaultCredentialId: number | null;
+    windowsPatterns: string;
+    dockerPatterns: string;
+    preferredPrefixes: string;
+  } | null;
 
   statsConfig?: {
     statusCheckEnabled: boolean;
@@ -144,6 +151,9 @@ export type Credential = {
 export type HostFolder = {
   name: string;
   children: (Host | HostFolder)[];
+  path?: string;
+  color?: string;
+  icon?: string;
 };
 
 export type TabType =
@@ -152,14 +162,15 @@ export type TabType =
   | "rdp"
   | "vnc"
   | "telnet"
-  | "stats"
+  | "host-metrics"
   | "files"
   | "host-manager"
   | "user-profile"
   | "admin-settings"
   | "docker"
   | "tunnel"
-  | "network_graph";
+  | "network_graph"
+  | "tmux_monitor"; // --- tmux-monitor ---
 
 export type TunnelStatusValue =
   | "CONNECTED"
@@ -263,7 +274,8 @@ export type AdminSection =
   | "sessions"
   | "roles"
   | "database"
-  | "api-keys";
+  | "api-keys"
+  | "audit-log";
 export type AccentColorId = string;
 export type ThemeId =
   | "dark"

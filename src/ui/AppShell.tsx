@@ -38,6 +38,7 @@ import { applyAccentColor, applyFontSize, PANE_COUNTS } from "@/lib/theme";
 import { useTheme } from "@/components/theme-provider";
 import {
   getSSHHosts,
+  getSSHFolders,
   getUserInfo,
   getOpenTabs,
   addOpenTab,
@@ -80,6 +81,8 @@ function sshHostToHost(h: SSHHostWithStatus): Host {
     enableTunnel: h.enableTunnel ?? false,
     enableFileManager: h.enableFileManager ?? false,
     enableDocker: h.enableDocker ?? false,
+    enableProxmox: h.enableProxmox ?? false,
+    proxmoxConfig: (h.proxmoxConfig as Host["proxmoxConfig"]) ?? null,
     enableRdp: h.enableRdp ?? h.connectionType === "rdp",
     enableVnc: h.enableVnc ?? h.connectionType === "vnc",
     enableTelnet: h.enableTelnet ?? h.connectionType === "telnet",
@@ -106,7 +109,10 @@ function sshHostToHost(h: SSHHostWithStatus): Host {
   };
 }
 
-function buildHostTree(hosts: SSHHostWithStatus[]): HostFolder {
+function buildHostTree(
+  hosts: SSHHostWithStatus[],
+  folderMeta?: Map<string, { color?: string; icon?: string }>,
+): HostFolder {
   const root: HostFolder = { name: "root", children: [] };
   const folderMap = new Map<string, HostFolder>();
   const getOrCreateFolder = (path: string): HostFolder => {
@@ -117,7 +123,14 @@ function buildHostTree(hosts: SSHHostWithStatus[]): HostFolder {
     for (const part of parts) {
       accumulated = accumulated ? `${accumulated} / ${part}` : part;
       if (!folderMap.has(accumulated)) {
-        const folder: HostFolder = { name: part, children: [] };
+        const meta = folderMeta?.get(accumulated);
+        const folder: HostFolder = {
+          name: part,
+          path: accumulated,
+          color: meta?.color,
+          icon: meta?.icon,
+          children: [],
+        };
         folderMap.set(accumulated, folder);
         current.children.push(folder);
       }
@@ -125,6 +138,10 @@ function buildHostTree(hosts: SSHHostWithStatus[]): HostFolder {
     }
     return current;
   };
+  // Surface empty folders (created but with no hosts yet) so they stay visible.
+  if (folderMeta) {
+    for (const path of folderMeta.keys()) getOrCreateFolder(path);
+  }
   for (const h of hosts) {
     const host = sshHostToHost(h);
     if (h.folder) {
@@ -389,10 +406,20 @@ export function AppShell({
   // Load real hosts from API
   const loadHosts = useCallback(async () => {
     try {
-      const raw = await getSSHHosts();
+      const [raw, folders] = await Promise.all([
+        getSSHHosts(),
+        getSSHFolders().catch(() => []),
+      ]);
       const converted = raw.map(sshHostToHost);
       setAllHosts(converted);
-      setRealHostTree(buildHostTree(raw));
+      const folderMeta = new Map<string, { color?: string; icon?: string }>();
+      for (const f of folders) {
+        folderMeta.set(f.name, {
+          color: f.color ?? undefined,
+          icon: f.icon ?? undefined,
+        });
+      }
+      setRealHostTree(buildHostTree(raw, folderMeta));
     } catch {
       // Keep empty state on error
     } finally {
@@ -442,7 +469,7 @@ export function AppShell({
     "telnet",
     "files",
     "docker",
-    "stats",
+    "host-metrics",
     "tunnel",
   ];
 
@@ -637,11 +664,22 @@ export function AppShell({
             : host.enableTelnet
               ? "telnet"
               : "terminal");
+    // --- tmux-monitor --- singleton tab, not a per-host tab
+    if (type === "tmux_monitor") {
+      openSingletonTab(type, undefined, host);
+      return;
+    }
     openTab(host, type);
   }
 
   const openSingletonTab = useCallback(
-    function openSingletonTab(type: TabType, pendingEvent?: string) {
+    // --- tmux-monitor --- (added optional `host` so tmux_monitor can open
+    // with a preselected host; existing callers are unaffected)
+    function openSingletonTab(
+      type: TabType,
+      pendingEvent?: string,
+      host?: Host,
+    ) {
       if (type === "host-manager") {
         if (pendingEvent === "host-manager:add-credential") {
           setSidebarOpen(true);
@@ -677,9 +715,15 @@ export function AppShell({
         docker: t("nav.docker"),
         tunnel: t("nav.tunnels"),
         network_graph: t("nav.networkGraph"),
+        tmux_monitor: t("nav.tmuxMonitor"), // --- tmux-monitor ---
       };
       setTabs((prev) => {
-        if (prev.find((t) => t.id === id)) return prev;
+        const existing = prev.find((t) => t.id === id);
+        if (existing) {
+          // --- tmux-monitor --- refocusing with a host preselects it
+          if (!host) return prev;
+          return prev.map((t) => (t.id === id ? { ...t, host } : t));
+        }
         return [
           ...prev,
           {
@@ -688,6 +732,7 @@ export function AppShell({
             type,
             label: singletonLabels[type] ?? type,
             openedAt: Date.now(),
+            ...(host ? { host } : {}), // --- tmux-monitor ---
           },
         ];
       });
@@ -1269,6 +1314,13 @@ export function AppShell({
             ].includes(type)
           ) {
             openSingletonTab(type, pendingEvent);
+          } else if (type === "tmux_monitor") {
+            // --- tmux-monitor --- singleton tab, optionally preselecting a host
+            openSingletonTab(
+              type,
+              undefined,
+              label ? allHosts.find((h) => h.name === label) : undefined,
+            );
           } else if (label) {
             const host = allHosts.find((h) => h.name === label);
             if (host) openTab(host, type);

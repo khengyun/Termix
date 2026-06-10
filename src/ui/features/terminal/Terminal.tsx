@@ -11,6 +11,7 @@ import { useXTerm } from "react-xtermjs";
 import { FitAddon } from "@xterm/addon-fit";
 import { ClipboardAddon } from "@xterm/addon-clipboard";
 import { RobustClipboardProvider } from "@/lib/clipboard-provider";
+import { copyToClipboard } from "@/lib/clipboard";
 import { Unicode11Addon } from "@xterm/addon-unicode11";
 import { WebLinksAddon } from "@xterm/addon-web-links";
 import { useTranslation } from "react-i18next";
@@ -71,6 +72,8 @@ interface SSHTerminalProps {
   onTitleChange?: (title: string) => void;
   initialPath?: string;
   executeCommand?: string;
+  /** Attach to this tmux session right after connecting (tmux monitor). */
+  tmuxAttachSession?: string;
   onOpenFileManager?: (path?: string) => void;
   previewTheme?: string | null;
 }
@@ -84,6 +87,7 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
       onClose,
       initialPath,
       executeCommand,
+      tmuxAttachSession,
       onOpenFileManager,
       previewTheme,
     },
@@ -947,7 +951,14 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
           ws.send(
             JSON.stringify({
               type: "connectToHost",
-              data: { cols, rows, hostConfig, initialPath, executeCommand },
+              data: {
+                cols,
+                rows,
+                hostConfig,
+                initialPath,
+                executeCommand,
+                tmuxAttachSession,
+              },
             }),
           );
         }
@@ -1666,33 +1677,9 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
     }
 
     async function writeTextToClipboard(text: string): Promise<boolean> {
-      try {
-        if (window.electronClipboard) {
-          await window.electronClipboard.writeText(text);
-          return true;
-        }
-        if (navigator.clipboard && navigator.clipboard.writeText) {
-          await navigator.clipboard.writeText(text);
-          return true;
-        }
-      } catch {
-        // fall through to legacy method
-      }
-      try {
-        const textarea = document.createElement("textarea");
-        textarea.value = text;
-        textarea.style.position = "fixed";
-        textarea.style.left = "-9999px";
-        document.body.appendChild(textarea);
-        textarea.focus();
-        textarea.select();
-        document.execCommand("copy");
-        document.body.removeChild(textarea);
-        return true;
-      } catch {
-        toast.error(t("terminal.clipboardWriteFailed"));
-        return false;
-      }
+      const ok = await copyToClipboard(text);
+      if (!ok) toast.error(t("terminal.clipboardWriteFailed"));
+      return ok;
     }
 
     async function readTextFromClipboard(): Promise<string> {
