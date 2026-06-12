@@ -22,6 +22,7 @@ export interface HostFeatureFlags {
   enableTunnel: boolean; // SSH only
   enableFileManager: boolean; // SSH only
   enableDocker: boolean; // SSH only
+  enableTmuxMonitor: boolean; // SSH only
   enableRemoteDesktop: boolean; // RDP, VNC only
 }
 
@@ -63,6 +64,7 @@ export interface Host {
   enableFileManager: boolean;
   enableDocker: boolean;
   enableProxmox: boolean;
+  enableTmuxMonitor: boolean;
   proxmoxConfig?: ProxmoxConfig | null;
   showTerminalInSidebar: boolean;
   showFileManagerInSidebar: boolean;
@@ -163,6 +165,7 @@ export interface HostData {
   enableFileManager?: boolean;
   enableDocker?: boolean;
   enableProxmox?: boolean;
+  enableTmuxMonitor?: boolean;
   proxmoxConfig?: ProxmoxConfig | Record<string, unknown> | null;
   showTerminalInSidebar?: boolean;
   showFileManagerInSidebar?: boolean;

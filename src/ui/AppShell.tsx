@@ -82,6 +82,7 @@ function sshHostToHost(h: SSHHostWithStatus): Host {
     enableFileManager: h.enableFileManager ?? false,
     enableDocker: h.enableDocker ?? false,
     enableProxmox: h.enableProxmox ?? false,
+    enableTmuxMonitor: h.enableTmuxMonitor ?? false, // --- tmux-monitor ---
     proxmoxConfig: (h.proxmoxConfig as Host["proxmoxConfig"]) ?? null,
     enableRdp: h.enableRdp ?? h.connectionType === "rdp",
     enableVnc: h.enableVnc ?? h.connectionType === "vnc",

@@ -90,6 +90,7 @@ export function createHostEditorForm(host: Host | null) {
     enableTerminal: host?.enableTerminal ?? true,
     enableFileManager: host?.enableFileManager ?? false,
     enableDocker: host?.enableDocker ?? false,
+    enableTmuxMonitor: host?.enableTmuxMonitor ?? false,
     enableProxmox: host?.enableProxmox ?? false,
     proxmoxConfig: host?.proxmoxConfig ?? {
       defaultCredentialId: null as number | null,
@@ -235,6 +236,7 @@ export function buildHostEditorPayload(
     enableTunnel: form.enableTunnel,
     enableFileManager: form.enableFileManager,
     enableDocker: form.enableDocker,
+    enableTmuxMonitor: form.enableTmuxMonitor,
     enableProxmox: form.enableProxmox,
     proxmoxConfig: form.enableProxmox ? form.proxmoxConfig : null,
     defaultPath: form.defaultPath || "/",
